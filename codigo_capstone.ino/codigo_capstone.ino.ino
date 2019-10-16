@@ -19,23 +19,23 @@ int l = 1000; //800, 200*5 son steps para cinco vueltas
 // 200 steps para 360 grados
 // 360 grados hacen una vuelta, que en el tornillo es 0.6 cm
 //
-volatile int t1 = 0;
-volatile int t2 = 0;
+volatile int t1 = 0; // tiempo duty cycle on
+volatile int t2 = 0; // tiempo duty cycle off
 
 const int heartPin = A1;
 const int scale_clk = 18;
 const int scale_data = 19;
 
-volatile int heartValue = 0;
+volatile int heartValue = 0; // medicion analogica del sensor biometrico
 //volatile int fasea = 0;
 //volatile int faseb = 0;
-const int faseA = 3;
-const int faseB = 2;
-long zero_factor = 0;
-volatile int encoder = 0;
-volatile int lastencoder = 0;
-volatile int aState;
-volatile int aLastState;
+const int faseA = 3; // fase A encoder
+const int faseB = 2; // fase B encoder
+long zero_factor = 0; // offset de peso de fábrica para el sensor de peso
+volatile int encoder = 0; // valor final del encoder en este ciclo (pulsos)
+volatile int lastencoder = 0; // para guardar el pulso anterior de encoder en medio de las compresiones
+volatile int aState; // medicion actual encoder
+volatile int aLastState; // medicion encoder del ciclo anterior
 volatile int steps = 0; //steps reales del motor
 volatile int degree = 0; // angulo del motor
 float duty_cycle_incr = 0.1; // para hacer la rampa se aumenta el duty cycle
@@ -122,6 +122,12 @@ void loop() {
         i = 0;
         while (delta < l) {
           delta = abs(steps - zero_steps);
+          if ((breakbone >= 5) || (weight > 30)) { // si por más de 50 steps, o 90 grados, no se ha podido mover el motor, o el peso ejercido supera el maximo para un niño
+            if (save_person == 0) {
+              delta = (int) delta * 2;
+            }
+            breakbone = 0;
+          }
           i++;
           duty_cycle_incr = min_duty + (l - delta) * k; // control proporcional es dar mas corriente con duty cycle
           if (duty_cycle_incr > duty_cycle) { // cada 1% de vuelta
@@ -150,12 +156,6 @@ void loop() {
           save_person = 0;
         }
 
-        if ((breakbone >= 5)||(weight > 30)) { // si por más de 50 steps, o 90 grados, no se ha podido mover el motor, o el peso ejercido supera el maximo para un niño
-          if (save_person == 0) {
-            delta = (int) delta * 2;
-          }
-          breakbone = 0;
-        }
 
         duty_cycle_incr = min_duty;
         zero_steps = steps;
@@ -163,6 +163,12 @@ void loop() {
         i = 0;
         while (delta < l) {
           delta = abs(steps - zero_steps);
+          if ((breakbone >= 5) || (weight > 30)) { // si por más de 50 steps, o 90 grados, no se ha podido mover el motor, o el peso ejercido supera el maximo para un niño
+            if (save_person == 0) {
+              delta = (int) delta * 2;
+            }
+            breakbone = 0;
+          }
           i++;
           duty_cycle_incr = min_duty + (l - delta) * k; // control proporcional es dar mas corriente con duty cycle
           if (duty_cycle_incr > duty_cycle) { // cada 1% de vuelta
@@ -191,12 +197,6 @@ void loop() {
           save_person = 0;
         }
 
-        if ((breakbone >= 5)||(weight > 30)) { // si por más de 50 steps, o 90 grados, no se ha podido mover el motor, o el peso ejercido supera el maximo para un niño
-          if (save_person == 0) {
-            delta = (int) delta * 2;
-          }
-          breakbone = 0;
-        }
       }
     }
   } else if (start_compress == 0) { // si no se ha encontrado hay que llegar a el a media velocidad
@@ -219,7 +219,7 @@ void loop() {
   if (heartValue >= u_heart) {
     reg_peaks++;
   }
-  if ((reg_peaks >= max_peaks)||(u_heart < 200)) { // si hay tarquicardia o la persona tiene pulso insuficiente
+  if ((reg_peaks >= max_peaks) || (u_heart < 200)) { // si hay tarquicardia o la persona tiene pulso insuficiente
     death_warning++;
   }
 
@@ -318,7 +318,7 @@ void encoder_read() {
     //Serial.print("Position: ");
     //Serial.println(encoder);
   }
-  aLastState = aState;
+  aLastState = aState; // actualizar estado de la fase A
   steps = (encoder / 3); // (encoder/600)*200
   degree = 0.6 * encoder; // 360*(encoder/600)
 
