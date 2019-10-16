@@ -32,7 +32,6 @@ volatile int heartValue = 0;
 const int faseA = 3;
 const int faseB = 2;
 long zero_factor = 0;
-const int interrupt_encoder = 2;
 volatile int encoder = 0;
 volatile int lastencoder = 0;
 volatile int aState;
@@ -75,9 +74,9 @@ void setup() {
   pinMode(scale_clk, INPUT); // CLK HX711
   pinMode(scale_data, INPUT); // Data HX711
 
-  pinMode(interrupt_encoder, INPUT_PULLUP);
+  pinMode(faseB, INPUT_PULLUP);
   pinMode(3, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(interrupt_encoder), encoder_read, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(faseB), encoder_read, CHANGE);
 
   pinMode(scale_clk, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(scale_clk), scale_read, CHANGE);
@@ -212,6 +211,18 @@ void loop() {
     }
   }
 
+  // medicion biometrica
+  heartValue = analogRead(heartPin); // leer el ecg del sensor de pulso cardiaco
+  heart_count++;
+  heart_measure = heart_measure + heartValue;
+  u_heart = heart_measure / heart_count; // promedio del ecg para detectar peaks
+  if (heartValue >= u_heart) {
+    reg_peaks++;
+  }
+  if ((reg_peaks >= max_peaks)||(u_heart < 200)) { // si hay tarquicardia o la persona tiene pulso insuficiente
+    death_warning++;
+  }
+
   if (weight >= 3) { //si el sensor de presión detecta una compresión inequivoca
     start_compress = 1;
   } else {
@@ -319,17 +330,6 @@ void encoder_read() {
   } else {
     lastencoder = encoder;
     breakcount = 0;
-  }
-  // medicion biometrica
-  heartValue = analogRead(heartPin); // leer el ecg del sensor de pulso cardiaco
-  heart_count++;
-  heart_measure = heart_measure + heartValue;
-  u_heart = heart_measure / heart_count; // promedio del ecg para detectar peaks
-  if (heartValue >= u_heart) {
-    reg_peaks++;
-  }
-  if ((reg_peaks >= max_peaks)||(u_heart < 200)) { // si hay tarquicardia o la persona tiene pulso insuficiente
-    death_warning++;
   }
 
   //   if (fasea == HIGH) {   // found a low-to-high on channel A
