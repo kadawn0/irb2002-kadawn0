@@ -39,7 +39,7 @@ volatile int aState;
 volatile int aLastState;
 volatile int steps = 0; //steps reales del motor
 volatile int degree = 0; // angulo del motor
-int duty_cycle_incr = 0.1; // para hacer la rampa se aumenta el duty cycle
+float duty_cycle_incr = 0.1; // para hacer la rampa se aumenta el duty cycle
 int start_encoder = 0; //se debe guardar el step del encoder para saber cuando se avanza al siguiente
 int zero_steps = 0; // da la posicion de comienzo del encoder en steps para contar hasta l y llegar a los 5 cm
 
